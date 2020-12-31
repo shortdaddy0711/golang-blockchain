@@ -57,6 +57,8 @@ func main() {
 	chain.AddBlock("Third Block after Genesis")
 
 	for _, block := range chain.blocks {
-
+		fmt.Printf("Previous Hash: %x\n", block.PrevHash)
+		fmt.Printf("Data in block: %s\n", block.Data)
+		fmt.Printf("Hash: %x\n", block.Hash)
 	}
 }
