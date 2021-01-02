@@ -1,62 +1,96 @@
 package main
 
 import (
+	"flag"
 	"fmt"
-	"bytes"
-	"crypto/sha256"
+	"os"
+	"runtime"
+	"strconv"
+
+	"github.com/shortdaddy0711/golang-blockchain/blockchain"
 )
 
-// BlockChain structure
-type BlockChain struct {
-	blocks []*Block
+// CommandLine struture
+type CommandLine struct {
+	blockchain *blockchain.BlockChain
 }
 
-// Block structure
-type Block struct {
-	Hash     []byte
-	Data     []byte
-	PrevHash []byte
+func (cli *CommandLine) printUsage() {
+	fmt.Println("Usage:")
+	fmt.Println(" add -block BLOCK_DATA - add a block to the chain")
+	fmt.Println(" print - Prints the blocks in the chain")
 }
 
-// DeriveHash method for Block structure
-func (b *Block) DeriveHash() {
-	info := bytes.Join([][]byte{b.Data, b.PrevHash}, []byte{})
-	hash := sha256.Sum256(info)
-	b.Hash = hash[:]
+func (cli *CommandLine) validateArgs() {
+	if len(os.Args) < 2 {
+		cli.printUsage()
+		runtime.Goexit() // initiate shutdown
+	}
 }
 
-// CreateBlock function to generate new block
-func CreateBlock(data string, prevHash []byte) *Block {
-	block := &Block{[]byte{}, []byte(data), prevHash}
-	block.DeriveHash()
-	return block
+func (cli *CommandLine) addBlock(data string) {
+	cli.blockchain.AddBlock(data)
+	fmt.Println("Added Block!")
 }
 
-// AddBlock method for BlockChain structure
-func (chain *BlockChain) AddBlock(data string) {
-	prevBlock := chain.blocks[len(chain.blocks) - 1]
-	new := CreateBlock(data, prevBlock.Hash)
-	chain.blocks = append(chain.blocks, new)
+func (cli *CommandLine) printChain() {
+	iterator := cli.blockchain.Iterator()
+
+	for {
+		block := iterator.Next()
+
+		fmt.Printf("Previous Hash: %x\n", block.PrevHash)
+		fmt.Printf("Data in block: %s\n", block.Data)
+		fmt.Printf("Hash: %x\n", block.Hash)
+
+		pow := blockchain.NewProof(block)
+		fmt.Printf("PoW: %s\n", strconv.FormatBool(pow.Validate()))
+		fmt.Println()
+
+		if len(block.PrevHash) == 0 {
+			break
+		}
+	}
 }
 
-// Genesis function to generate the Genesis block
-func Genesis() *Block {
-	return CreateBlock("Genesis", []byte{})
-}
+func (cli *CommandLine) run() {
+	cli.validateArgs()
 
-// InitBlockChain function to init blockchain with Genesis block
-func InitBlockChain() *BlockChain {
-	return &BlockChain{[]*Block{Genesis()}}
+	addBlockCmd := flag.NewFlagSet("add", flag.ExitOnError)
+	printChainCmd := flag.NewFlagSet("print", flag.ExitOnError)
+	addBlockData := addBlockCmd.String("block", "", "Block data ")
+
+	switch os.Args[1] {
+	case "add":
+		err := addBlockCmd.Parse(os.Args[2:])
+		blockchain.Handle(err)
+	case "print":
+		err := printChainCmd.Parse(os.Args[2:])
+		blockchain.Handle(err)
+	default:
+		cli.printUsage()
+		runtime.Goexit()
+	}
+
+	if addBlockCmd.Parsed() { // if addBlockCmd.parse invoked
+		if *addBlockData == "" {
+			addBlockCmd.Usage()
+			runtime.Goexit()
+		}
+		cli.addBlock(*addBlockData)
+	}
+
+	if printChainCmd.Parsed() {
+		cli.printChain()
+	}
 }
 
 func main() {
-	chain := InitBlockChain()
+	defer os.Exit(0)
+	chain := blockchain.InitBlockChain()
+	defer chain.Database.Close()
 
-	chain.AddBlock("First Block after Genesis")
-	chain.AddBlock("Second Block after Genesis")
-	chain.AddBlock("Third Block after Genesis")
+	cli := CommandLine{chain}
+	cli.run()
 
-	for _, block := range chain.blocks {
-
-	}
 }
