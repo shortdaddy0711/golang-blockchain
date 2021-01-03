@@ -25,6 +25,7 @@ type Block struct {
 // 	b.Hash = hash[:]
 // }
 
+// HashTransactions method for Block struct to hash the transaction
 func (b *Block) HashTransactions() []byte {
 	var txHashes [][]byte
 	var txHash [32]byte
