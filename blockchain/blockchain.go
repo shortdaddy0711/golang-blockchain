@@ -2,11 +2,16 @@ package blockchain
 
 import (
 	"fmt"
-	"github.com/dgraph-io/badger/v2"
+	"os"
+	"runtime"
+
+	badger "github.com/dgraph-io/badger/v2"
 )
 
 const (
 	dbPath = "./tmp/blocks"
+	dbFile = "./tmp/blocks/MANIFEST"
+	genesisData = "First Transaction from Genesis"
 )
 
 // BlockChain structure
@@ -22,9 +27,21 @@ type BlockChainIterator struct {
 	Database    *badger.DB
 }
 
+func DBexists() bool {
+	if _, err := os.Stat(dbFile); os.IsNotExist(err) {
+		return false
+	}
+	return true
+}
+
 // InitBlockChain function to init blockchain with Genesis block
-func InitBlockChain() *BlockChain {
+func InitBlockChain(address string) *BlockChain {
 	var lastHash []byte
+
+	if DBexists() {
+		fmt.Println("Blockchain already exists")
+		runtime.Goexit()
+	}
 
 	opts := badger.DefaultOptions(dbPath)
 
