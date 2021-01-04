@@ -84,7 +84,7 @@ func (cli *CommandLine) send(from, to string, amount int) {
 	defer chain.Database.Close()
 
 	tx := blockchain.NewTransaction(from, to, amount, chain)
-	chain.Addblock([]*blockchain.Transaction{tx})
+	chain.AddBlock([]*blockchain.Transaction{tx})
 	fmt.Println("Success!")
 }
 
@@ -101,7 +101,7 @@ func (cli *CommandLine) run() {
 	createBlockchainAddress := createBlockchainCmd.String("address", "", "The address to send genesis block reward to")
 	sendFrom := sendCmd.String("from", "", "source wallet address")
 	sendTo := sendCmd.String("to", "", "Destination wallet address")
-	sendAmount := sendCmd.String("amount", 0, "Amount to send")
+	sendAmount := sendCmd.Int("amount", 0, "Amount to send")
 
 	switch os.Args[1] {
 	case "getbalance":
@@ -154,5 +154,4 @@ func main() {
 	defer os.Exit(0)
 	cli := CommandLine{}
 	cli.run()
-
 }
