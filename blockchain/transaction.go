@@ -2,11 +2,18 @@ package blockchain
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/gob"
 	"encoding/hex"
 	"fmt"
 	"log"
+	"math/big"
+	"strings"
+
+	"github.com/tensor-programming/golang-blockchain/wallet"
 )
 
 // Transaction structure
@@ -16,18 +23,31 @@ type Transaction struct {
 	Outputs []TxOutput
 }
 
-// TxOutput transaction output structure
-type TxOutput struct {
-	Value  int
-	PubKey string
+//
+func (tx *Transaction) Serialize() {
+	var encoded bytes.Buffer
+
+	enc := gob.NewEncoder(&encoded)
+	err := enc.Encode(tx)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	return encoded.Bytes()
 }
 
-// TxInput transaction input structure
-type TxInput struct {
-	ID  []byte
-	Out int
-	Sig string // User's account
+//
+func (tx *Transaction) Hash() []byte {
+	var hash [32]byte
+
+	txCopy := *tx
+	txCopy.ID = []byte{}
+
+	hash = sha256.Sum256(txCopy.Serialize())
+
+	return hash[:]
 }
+
 
 // SetID method to make ID for each transaction
 func (tx *Transaction) SetID() {
@@ -95,13 +115,21 @@ func (tx *Transaction) IsCoinbase() bool {
 	return len(tx.Inputs) == 1 && len(tx.Inputs[0].ID) == 0 && tx.Inputs[0].Out == -1
 }
 
-// CanUnlock method for TxInput structure
-func (in *TxInput) CanUnlock(data string) bool {
-	return in.Sig == data
-}
+//
+func (tx *Transaction) Sign(privKey ecdsa.PrivateKey, prevTXs map[string]Transaction) {
+	if tx.IsCoinbase() {
+		return
+	}
 
-// CanBeUnlocked method for TxOutput structure
-func (out *TxOutput) CanBeUnlocked(data string) bool {
-	return out.PubKey == data
-}
+	for _, in := range tx.Inputs {
+		if prevTXs[hex.EncodeToString(in.ID)].ID == nil {
+			log.Panic("ERROR: Previous transaction is not correct")
+		}
+	}
 
+	txCopy := tx.TrimmedCopy()
+
+	for inID, in := range txCopy.Inputs {
+		prevTXs := prevTXs[hex.EncodeToString(in.ID)]
+	}
+}
