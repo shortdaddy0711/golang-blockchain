@@ -1,7 +1,10 @@
 package blockchain
 
-import "bytes"
+import (
+	"bytes"
 
+	"github.com/shortdaddy0711/golang-blockchain/wallet"
+)
 // TxOutput transaction output structure
 type TxOutput struct {
 	Value      int
